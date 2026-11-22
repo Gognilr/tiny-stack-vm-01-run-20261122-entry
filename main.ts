@@ -111,24 +111,21 @@ function run(prog: Buffer, input: Buffer): { out: Uint8Array; exit: number } {
         const b = D[sp - 1];
         const a = D[sp - 2];
         let r = 0;
+        if (op >= 0x13 && op <= 0x16 && b === 0) return end(4); // DIV/MOD/DIVU/MODU by zero
         switch (op) {
           case 0x10: r = (a + b) | 0; break;
           case 0x11: r = (a - b) | 0; break;
           case 0x12: r = Math.imul(a, b); break;
           case 0x13:
-            if (b === 0) return end(4);
             r = a === -2147483648 && b === -1 ? a : (a / b) | 0;
             break;
           case 0x14:
-            if (b === 0) return end(4);
             r = b === -1 ? 0 : (a % b) | 0;
             break;
           case 0x15:
-            if (b === 0) return end(4);
             r = Math.floor((a >>> 0) / (b >>> 0)) | 0;
             break;
           case 0x16:
-            if (b === 0) return end(4);
             r = ((a >>> 0) % (b >>> 0)) | 0;
             break;
           case 0x18: r = a & b; break;
@@ -199,12 +196,16 @@ function run(prog: Buffer, input: Buffer): { out: Uint8Array; exit: number } {
   }
 }
 
-const ids = readdirSync("/input").sort();
+// Env stand-ins for /input and /output outside a container (the kit starter's pattern).
+const IN = process.env.MAKEFUN_INPUT_DIR ?? "/input";
+const OUT = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+
+const ids = readdirSync(IN).sort();
 for (const id of ids) {
-  const prog = readFileSync(`/input/${id}/program.bin`);
-  const inp = readFileSync(`/input/${id}/input.bin`);
+  const prog = readFileSync(`${IN}/${id}/program.bin`);
+  const inp = readFileSync(`${IN}/${id}/input.bin`);
   const { out, exit } = run(prog, inp);
-  mkdirSync(`/output/${id}`, { recursive: true });
-  writeFileSync(`/output/${id}/stdout.bin`, out);
-  writeFileSync(`/output/${id}/exit.txt`, String(exit));
+  mkdirSync(`${OUT}/${id}`, { recursive: true });
+  writeFileSync(`${OUT}/${id}/stdout.bin`, out);
+  writeFileSync(`${OUT}/${id}/exit.txt`, String(exit));
 }
